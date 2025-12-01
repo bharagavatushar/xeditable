@@ -75,14 +75,16 @@
   function formatByTokens(date, fmt) {
     if (!date || isNaN(date.getTime())) return '';
     const Y = date.getFullYear();
+    const YY = String(Y).slice(-2); // add 2 digit year
     const M = pad2(date.getMonth()+1);
     const D = pad2(date.getDate());
     const H = pad2(date.getHours());
     const m = pad2(date.getMinutes());
     return fmt
       .replace(/YYYY/g, String(Y))
+      .replace(/YY/g, YY) // add 2 digit year
       .replace(/MM/g, M)
-      .replace(/DD/g, D)
+      .replace(/DD/g, D) 
       .replace(/HH/g, H)
       .replace(/mm/g, m);
   }
@@ -556,10 +558,12 @@
       const t = (this.options.type || '').toLowerCase();
       if ((t === 'date' || t === 'datetime' || t === 'datetime-local') && v) {
         const fmt = this.options.format || (t === 'date' ? DEFAULT_DATE_FMT : DEFAULT_DT_FMT);
-        let dt = null;
-        if (/^\d{4}-\d{2}-\d{2}/.test(String(v))) dt = new Date(v);
-        if (!dt || isNaN(dt)) dt = parseByTokens(String(v), fmt);
-        if (dt && !isNaN(dt)) v = (t === 'date') ? formatByTokens(dt, DEFAULT_DATE_FMT) : formatByTokens(dt, DEFAULT_DT_FMT);
+        // Always parse as a tokenized local date, never as UTC.
+        let dt = parseByTokens(String(v), fmt) || parseByTokens(String(v), DEFAULT_DATE_FMT);
+        if (dt && !isNaN(dt)) {
+          v = (t === 'date')
+            ? formatByTokens(dt, DEFAULT_DATE_FMT)
+            : formatByTokens(dt, DEFAULT_DT_FMT);
       }
 
       const set = inputEl.setValue ? (x => inputEl.setValue(x)) : (x => { if ('value' in inputEl) inputEl.value = x ?? ''; });
@@ -881,9 +885,8 @@
       if (t === 'date' || t === 'datetime' || t === 'datetime-local') {
         const fmt = this.options.format || (t === 'date' ? DEFAULT_DATE_FMT : DEFAULT_DT_FMT);
         if (!value) return this.options.emptytext;
-        let dt = null;
-        if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) dt = new Date(value);
-        if (!dt || isNaN(dt)) dt = parseByTokens(String(value), fmt) || parseByTokens(String(value), DEFAULT_DATE_FMT);
+        // Again parse tokens by local not new Date('YYYY-MM-DD');
+        let dt = parseByTokens(String(value), fmt) || parseByTokens(String(value), DEFAULT_DATE_FMT);
         if (!dt || isNaN(dt)) return String(value);
         return formatByTokens(dt, fmt);
       }
